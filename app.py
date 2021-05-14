@@ -5,11 +5,16 @@ import requests
 import pandas as pd
 import streamlit as st
 from copy import deepcopy
+from fake_useragent import UserAgent
+from footer_utils import image, link, layout, footer
 
-# faking chrome browser
-browser_header = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.76 Safari/537.36'}
+# browser_header = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.76 Safari/537.36'}
+# browser_header = {'User-Agent': 'Mozilla/5.0 (Linux; Android 10; ONEPLUS A6000) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.99 Mobile Safari/537.36'}
 
-st.set_page_config(layout='wide', initial_sidebar_state='collapsed')
+st.set_page_config(layout='wide',
+                   initial_sidebar_state='collapsed',
+                   page_icon="https://www.cowin.gov.in/favicon.ico",
+                   page_title="CoWIN Vaccination Slot Availability")
 
 @st.cache(allow_output_mutation=True, suppress_st_warning=True)
 def load_mapping():
@@ -24,11 +29,11 @@ def filter_capacity(df, col, value):
     df_temp = deepcopy(df.loc[df[col] > value, :])
     return df_temp
 
+@st.cache(allow_output_mutation=True)
+def Pageviews():
+    return []
 
 mapping_df = load_mapping()
-
-mapping_dict = pd.Series(mapping_df["district id"].values,
-                         index = mapping_df["district name"].values).to_dict()
 
 rename_mapping = {
     'date': 'Date',
@@ -46,14 +51,24 @@ rename_mapping = {
 st.title('CoWIN Vaccination Slot Availability')
 st.info('The CoWIN APIs are geo-fenced so sometimes you may not see an output! Please try after sometime ')
 
+valid_states = list(np.unique(mapping_df["state_name"].values))
+
+left_column_1, center_column_1, right_column_1 = st.beta_columns(3)
+with left_column_1:
+    numdays = st.slider('Select Date Range', 0, 100, 3)
+
+with center_column_1:
+    state_inp = st.selectbox('Select State', [""] + valid_states)
+    if state_inp != "":
+        mapping_df = filter_column(mapping_df, "state_name", state_inp)
+
+
+mapping_dict = pd.Series(mapping_df["district id"].values,
+                         index = mapping_df["district name"].values).to_dict()
+
 # numdays = st.sidebar.slider('Select Date Range', 0, 100, 10)
 unique_districts = list(mapping_df["district name"].unique())
 unique_districts.sort()
-
-left_column_1, right_column_1 = st.beta_columns(2)
-with left_column_1:
-    numdays = st.slider('Select Date Range', 0, 100, 5)
-
 with right_column_1:
     dist_inp = st.selectbox('Select District', unique_districts)
 
@@ -62,6 +77,9 @@ DIST_ID = mapping_dict[dist_inp]
 base = datetime.datetime.today()
 date_list = [base + datetime.timedelta(days=x) for x in range(numdays)]
 date_str = [x.strftime("%d-%m-%Y") for x in date_list]
+
+temp_user_agent = UserAgent()
+browser_header = {'User-Agent': temp_user_agent.random}
 
 final_df = None
 for INP_DATE in date_str:
@@ -128,32 +146,37 @@ if (final_df is not None) and (len(final_df)):
 else:
     st.error("Unable to fetch data currently, please try after sometime")
 
-footer="""<style>
-a:link , a:visited{
-color: blue;
-background-color: transparent;
-text-decoration: underline;
-}
+# footer="""<style>
+# a:link , a:visited{
+# color: blue;
+# background-color: transparent;
+# text-decoration: underline;
+# }
 
-a:hover,  a:active {
-color: red;
-background-color: transparent;
-text-decoration: underline;
-}
+# a:hover,  a:active {
+# color: red;
+# background-color: transparent;
+# text-decoration: underline;
+# }
 
-.footer {
-position: fixed;
-left: 0;
-bottom: 0;
-width: 100%;
-background-color: white;
-color: black;
-text-align: center;
-}
-</style>
-<div class="footer">
-<p>Developed with ❤ by <a style='display: block; text-align: center;' href="https://github.com/bhattbhavesh91" target="_blank">Bhavesh Bhatt</a></p>
-</div>
-"""
-st.markdown(footer,unsafe_allow_html=True)
+# .footer {
+# position: fixed;
+# left: 0;
+# bottom: 0;
+# width: 100%;
+# background-color: white;
+# color: black;
+# text-align: center;
+# }
+# </style>
+# <div class="footer">
+# <p>Developed with ❤ by <a style='display: block; text-align: center;' href="https://github.com/bhattbhavesh91" target="_blank">Bhavesh Bhatt</a></p>
+# </div>
+# """
+# st.markdown(footer,unsafe_allow_html=True)
 # st.markdown("_- Bhavesh Bhatt_")
+
+pageviews=Pageviews()
+pageviews.append('dummy')
+pg_views = len(pageviews)
+footer(pg_views)
